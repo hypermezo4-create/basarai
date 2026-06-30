@@ -1,5 +1,59 @@
 import { createClient } from './supabase/client'
-import { ErrorResponse } from '../types'
+
+export class ApiError extends Error {
+  code: string
+  requestId?: string
+
+  constructor(message: string, code: string, requestId?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+    this.requestId = requestId
+  }
+}
+
+function parseErrorPayload(
+  payload: unknown,
+): { code: string; message: string; requestId?: string } | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const errorPayload = payload as {
+    error?: { code?: unknown; message?: unknown; request_id?: unknown }
+    detail?: unknown
+  }
+
+  if (errorPayload.error && typeof errorPayload.error.message === 'string') {
+    return {
+      code:
+        typeof errorPayload.error.code === 'string'
+          ? errorPayload.error.code
+          : 'UNKNOWN',
+      message: errorPayload.error.message,
+      requestId:
+        typeof errorPayload.error.request_id === 'string'
+          ? errorPayload.error.request_id
+          : undefined,
+    }
+  }
+
+  if (typeof errorPayload.detail === 'string') {
+    return { code: 'VALIDATION_ERROR', message: errorPayload.detail }
+  }
+
+  if (Array.isArray(errorPayload.detail)) {
+    const firstMessage = errorPayload.detail.find(
+      (item): item is { msg?: string } =>
+        Boolean(item) && typeof item === 'object' && 'msg' in item
+    )
+    if (typeof firstMessage?.msg === 'string') {
+      return { code: 'VALIDATION_ERROR', message: firstMessage.msg }
+    }
+  }
+
+  return null
+}
 
 export async function apiRequest<T = unknown>(
   endpoint: string,
@@ -28,22 +82,28 @@ export async function apiRequest<T = unknown>(
       await supabase.auth.signOut()
       window.location.href = '/login'
     }
-    throw new Error('Unauthorized')
+    throw new ApiError('Unauthorized', 'UNAUTHORIZED')
   }
 
   if (!response.ok) {
-    let message = 'API request failed'
+    let message = response.statusText || 'API request failed'
+    let code = 'UNKNOWN'
+    let requestId: string | undefined
     const contentType = response.headers.get('content-type') || ''
     if (contentType.includes('application/json')) {
       try {
         const text = await response.text()
-        const error = JSON.parse(text) as ErrorResponse
-        message = error.error?.message || message
+        const parsed = parseErrorPayload(JSON.parse(text))
+        if (parsed) {
+          message = parsed.message
+          code = parsed.code
+          requestId = parsed.requestId
+        }
       } catch {
         // JSON parse failed, use default message
       }
     }
-    throw new Error(message)
+    throw new ApiError(message, code, requestId)
   }
 
   if (

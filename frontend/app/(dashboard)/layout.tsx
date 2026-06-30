@@ -1,16 +1,24 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { useBrands } from '@/hooks/use-brands'
+import { useProfile } from '@/hooks/use-profile'
+import { BrandSelector } from '@/components/brand-selector'
+import { BrandsProvider } from '@/components/providers/brands-provider'
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const params = useParams()
+  const currentBrandId = params.brandId as string | undefined
+  const { brands } = useBrands()
+  const { profile } = useProfile()
 
   async function handleLogout() {
     const supabase = createClient()
@@ -27,12 +35,23 @@ export default function DashboardLayout({
             Basar AI
           </Link>
           <div className="flex items-center gap-4">
+            {brands.length > 0 && (
+              <BrandSelector brands={brands} currentBrandId={currentBrandId} />
+            )}
             <Link
               href="/account"
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               Account
             </Link>
+            {profile?.is_admin && (
+              <Link
+                href="/admin"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Admin
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               Log out
             </Button>
@@ -41,5 +60,17 @@ export default function DashboardLayout({
       </nav>
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
     </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <BrandsProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </BrandsProvider>
   )
 }

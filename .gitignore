@@ -233,3 +233,6 @@ secrets.json
 credentials.json
 .claude/settings.local.json
 .opencode/
+.agents/
+.specs/
+.specify

@@ -55,7 +55,7 @@ Basar AI is a multi-brand SaaS for generating social images. Users create brands
 | Provider keys | Key rotation with single active key per provider | Allows safe rotation without downtime |
 | Generation lifecycle | `pending`/`processing`/`succeeded`/`failed` statuses | Preserves failure history and supports retries/ops visibility |
 | Admin | Operator-only (email allowlist) | Users manage their brands; operator monitors system |
-| AI Models | OpenAI `gpt-image-1.5` + Gemini `gemini-3-pro-image-preview` | Latest image generation models |
+| AI Models | OpenAI `gpt-image-2` + Gemini `gemini-3-pro-image-preview` | Latest image generation models |
 | Summary derivation | Template concatenation | Deterministic, fast, no extra API costs |
 | History actions | View + Delete only | MVP scope; no prompt reuse |
 
@@ -92,7 +92,7 @@ Basar AI is a multi-brand SaaS for generating social images. Users create brands
                                    ▼
                     ┌──────────────────────────┐
                     │    Provider APIs         │
-                    │  - OpenAI (gpt-image-1.5)│
+                    │  - OpenAI (gpt-image-2)  │
                     │  - Gemini API            │
                     │    (gemini-3-pro-image-  │
                     │     preview)             │
@@ -405,7 +405,7 @@ CREATE POLICY generations_owner_all ON generations FOR ALL
   WITH CHECK (is_brand_owner(brand_id));
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` bypasses RLS and is backend-only.
+`SUPABASE_SECRET_KEY` bypasses RLS and is backend-only.
 
 ### Storage
 
@@ -729,7 +729,7 @@ Authorization: Bearer <supabase_access_token>
 {
   "prompt": "A modern office space with natural lighting",
   "provider": "openai",
-  "model": "gpt-image-1.5",
+  "model": "gpt-image-2",
   "platform_preset": "instagram_post",
   "logo_mode": "watermark"
 }
@@ -741,7 +741,7 @@ Authorization: Bearer <supabase_access_token>
   "id": "uuid",
   "prompt": "A modern office space with natural lighting",
   "provider": "openai",
-  "model": "gpt-image-1.5",
+  "model": "gpt-image-2",
   "platform_preset": "instagram_post",
   "width": 1080,
   "height": 1080,
@@ -854,7 +854,7 @@ async def generate_image(
                 prompt=full_prompt,
                 width=target_width,
                 height=target_height,
-                model=request.model or 'gpt-image-1.5'
+                model=request.model or 'gpt-image-2'
             )
         else:
             # Gemini requires aspect_ratio and image_size, not width/height.
@@ -923,7 +923,7 @@ async def generate_image(
 
 ### Provider Integration
 
-#### OpenAI (gpt-image-1.5)
+#### OpenAI (gpt-image-2)
 
 ```python
 from dataclasses import dataclass
@@ -938,7 +938,7 @@ async def openai_generate(
     prompt: str,
     width: int,
     height: int,
-    model: str = 'gpt-image-1.5'
+    model: str = 'gpt-image-2'
 ) -> ProviderResult:
     """Generate image using OpenAI API."""
     async with httpx.AsyncClient() as client:
@@ -1451,20 +1451,21 @@ frontend/
 
 **Checkpoint**: User can view and delete history. Hard delete verified.
 
-### Phase 8: Admin + Polish
+### Phase 8: Admin
+
+> **Scope update (2026-06-19)**: Phase 8 now covers the operator admin area only. The polish work (former tasks 8.5–8.7) has moved to the separate **UI/UX revamp** phase. Spec: `specs/009-admin-dashboard/`.
 
 | Task | Description |
 |------|-------------|
-| 8.1 | API: Admin brands endpoint |
-| 8.2 | API: Admin stats endpoint |
-| 8.3 | API: Admin gate (email allowlist) |
-| 8.4 | UI: Admin page |
-| 8.5 | Error handling polish |
-| 8.6 | Loading states |
-| 8.7 | Empty states |
+| 8.1 | API: Admin brands endpoint (`GET /admin/brands` — all brands + per-brand counts) |
+| 8.2 | API: Admin stats endpoint (`GET /admin/stats` — aggregate usage counts only, no cost/token tracking) |
+| 8.3 | API: Admin gate (email allowlist) — already implemented via `get_current_admin_user` + `ADMIN_EMAILS` |
+| 8.4 | UI: Admin page (gated, read-only dashboard: stats + all-brands list) |
 | 8.8 | Definition of Done verification |
 
-**Checkpoint**: All features complete. Definition of Done verified.
+**Moved to UI/UX revamp**: 8.5 Error handling polish · 8.6 Loading states · 8.7 Empty states.
+
+**Checkpoint**: Operator admin monitoring complete and verified; remaining polish handled in the UI/UX revamp.
 
 ---
 
@@ -1495,7 +1496,7 @@ frontend/
 ```bash
 # Supabase (public)
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 
 # Browser -> Next.js (same-origin API route/rewrite)
 NEXT_PUBLIC_API_URL=/api
@@ -1509,8 +1510,7 @@ NEXT_SERVER_API_URL=http://127.0.0.1:8000
 ```bash
 # Supabase
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SECRET_KEY=sb_secret_...
 
 # Storage
 STORAGE_BUCKET=brand-assets
@@ -1525,8 +1525,8 @@ PORT=8000
 
 ### Production Notes
 
-- `SUPABASE_SERVICE_ROLE_KEY` must only be used server-side
-- Never expose service role key to frontend
+- `SUPABASE_SECRET_KEY` must only be used server-side
+- Never expose the secret key to frontend
 - `ADMIN_EMAILS` controls operator access
 
 ---
@@ -1691,7 +1691,7 @@ supabase/
 
 | Model | Description |
 |-------|-------------|
-| `gpt-image-1.5` | Latest image generation model (default) |
+| `gpt-image-2` | Latest image generation model (default) |
 | `gpt-image-1` | Previous generation (fallback) |
 
 ### Gemini Image Models

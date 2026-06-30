@@ -9,7 +9,7 @@ Set up the complete foundation for Basar AI: repository structure (frontend, bac
 
 ## Technical Context
 
-**Language/Version**: Python 3.11 (backend), TypeScript 5.x (frontend)
+**Language/Version**: Python 3.13 (backend), TypeScript 5.x (frontend)
 **Primary Dependencies**: FastAPI 0.109+, Next.js 14 (App Router), @supabase/ssr, @supabase/supabase-js, PyJWT, supabase-py, shadcn/ui, Tailwind CSS
 **Storage**: Supabase PostgreSQL (with RLS), Supabase Storage (brand-assets bucket), Supabase Vault (provider key secrets)
 **Testing**: pytest + pytest-asyncio (backend), manual verification (frontend Phase 1)

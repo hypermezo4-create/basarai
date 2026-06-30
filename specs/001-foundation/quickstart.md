@@ -5,7 +5,7 @@
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Python 3.11+
+- Python 3.13+
 - Supabase CLI (`npx supabase`)
 - A Supabase project (or local Supabase via `supabase start`)
 
